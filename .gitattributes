@@ -1,0 +1,15 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Force LF for these file types
+*.go text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.sh text eol=lf
+*.dockerfile text eol=lf
+
+# Binary files
+*.exe binary
+*.png binary
+*.jpg binary

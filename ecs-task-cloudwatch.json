@@ -1,0 +1,71 @@
+{
+  "family": "log-metric-simulator-cloudwatch",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "256",
+  "memory": "512",
+  "taskRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "simulator",
+      "image": "YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/log-metric-generator:latest",
+      "essential": true,
+      "environment": [
+        {
+          "name": "OUTPUT_MODE",
+          "value": "cloudwatch"
+        },
+        {
+          "name": "SIMULATOR_LOG_GROUP",
+          "value": "/ecs/simulator"
+        },
+        {
+          "name": "GENERATOR_WEB_ENABLED",
+          "value": "true"
+        },
+        {
+          "name": "GENERATOR_WEB_RPS",
+          "value": "100"
+        },
+        {
+          "name": "GENERATOR_ERROR_ENABLED",
+          "value": "true"
+        },
+        {
+          "name": "GENERATOR_ERROR_RATE",
+          "value": "0.03"
+        },
+        {
+          "name": "METRICS_NAMESPACE",
+          "value": "TestApp/Metrics"
+        },
+        {
+          "name": "METRICS_INTERVAL",
+          "value": "60"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "AWS_ACCESS_KEY_ID",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:YOUR_ACCOUNT_ID:secret:ecs/aws-access-key:AWS_ACCESS_KEY_ID::"
+        },
+        {
+          "name": "AWS_SECRET_ACCESS_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:YOUR_ACCOUNT_ID:secret:ecs/aws-access-key:AWS_SECRET_ACCESS_KEY::"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/simulator",
+          "awslogs-stream-prefix": "app",
+          "awslogs-region": "us-east-1",
+          "awslogs-create-group": "true"
+        }
+      }
+    }
+  ]
+}

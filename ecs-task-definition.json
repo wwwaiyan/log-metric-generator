@@ -1,0 +1,84 @@
+{
+  "family": "log-metric-simulator",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE",
+    "EC2"
+  ],
+  "cpu": "256",
+  "memory": "512",
+  "containerDefinitions": [
+    {
+      "name": "simulator",
+      "image": "YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/log-metric-generator:latest",
+      "essential": true,
+      "environment": [
+        {
+          "name": "OUTPUT_MODE",
+          "value": "stdout"
+        },
+        {
+          "name": "SIMULATOR_LOG_GROUP",
+          "value": "/ecs/simulator"
+        },
+        {
+          "name": "GENERATOR_WEB_ENABLED",
+          "value": "true"
+        },
+        {
+          "name": "GENERATOR_WEB_RPS",
+          "value": "50"
+        },
+        {
+          "name": "GENERATOR_ERROR_ENABLED",
+          "value": "true"
+        },
+        {
+          "name": "GENERATOR_ERROR_RATE",
+          "value": "0.05"
+        },
+        {
+          "name": "GENERATOR_CUSTOM_ENABLED",
+          "value": "true"
+        },
+        {
+          "name": "METRICS_NAMESPACE",
+          "value": "TestApp/Metrics"
+        },
+        {
+          "name": "METRICS_INTERVAL",
+          "value": "60"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/simulator",
+          "awslogs-stream-prefix": "app",
+          "awslogs-region": "us-east-1",
+          "awslogs-create-group": "true"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "exit 0"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 10
+      }
+    }
+  ],
+  "tags": [
+    {
+      "key": "Application",
+      "value": "LogMetricSimulator"
+    },
+    {
+      "key": "Environment",
+      "value": "testing"
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: alpine
+    image: log-metric-generator:latest
+    container_name: log-simulator
+    environment:
+      - OUTPUT_MODE=stdout
+      - SIMULATOR_LOG_GROUP=/ecs/simulator
+      - SIMULATOR_INSTANCE_ID=local-sim-01
+      - GENERATOR_WEB_ENABLED=true
+      - GENERATOR_WEB_RPS=50
+      - GENERATOR_ERROR_ENABLED=true
+      - GENERATOR_ERROR_RATE=0.05
+      - GENERATOR_CUSTOM_ENABLED=true
+      - METRICS_NAMESPACE=TestApp/Metrics
+      - METRICS_INTERVAL=60
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  simulator-highrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: alpine
+    image: log-metric-generator:latest
+    container_name: log-simulator-highrate
+    environment:
+      - OUTPUT_MODE=stdout
+      - SIMULATOR_LOG_GROUP=/ecs/simulator
+      - SIMULATOR_LOG_STREAM=app-highrate
+      - SIMULATOR_INSTANCE_ID=highrate-01
+      - GENERATOR_WEB_ENABLED=true
+      - GENERATOR_WEB_RPS=500
+      - GENERATOR_ERROR_ENABLED=true
+      - GENERATOR_ERROR_RATE=0.10
+      - GENERATOR_CUSTOM_ENABLED=true
+      - METRICS_NAMESPACE=HighRateApp/Metrics
+      - METRICS_INTERVAL=30
+      - METRICS_CPU_BASE=75.0
+      - METRICS_MEMORY_BASE=80.0
+    restart: unless-stopped

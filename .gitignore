@@ -1,0 +1,44 @@
+# Binaries (use /simulator for directory)
+simulator/
+*.exe
+
+# Go
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Dependency directories
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build outputs
+build/
+dist/
+
+# Config (keep config.yaml, ignore local overrides)
+config.local.yaml
+config.*.local.yaml
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp

@@ -1,0 +1,39 @@
+simulator:
+  log_group: /ecs/simulator
+  log_stream: app-default
+  instance_id: ""
+  flush_interval_ms: 5000
+
+generators:
+  web_server:
+    enabled: true
+    rps: 10
+    paths:
+      - /api/users
+      - /api/orders
+      - /api/products
+      - /health
+
+  error_logs:
+    enabled: true
+    error_rate: 0.05
+
+  custom_logs:
+    enabled: true
+    format: json
+
+metrics:
+  namespace: TestApp/Metrics
+  interval_seconds: 60
+  cpu_base: 45.0
+  memory_base: 65.0
+  request_count: 1000
+  latency_p50_ms: 120
+  latency_p99_ms: 500
+
+output:
+  mode: stdout
+  cloudwatch:
+    region: us-east-1
+    endpoint: ""
+    stream_name: ""
