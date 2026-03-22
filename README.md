@@ -8,12 +8,18 @@ A lightweight Go application for simulating AWS CloudWatch logs and metrics. Des
   - Apache-style web server access logs
   - Error logs with configurable error rates
   - Custom JSON/CloudWatch format logs
+  - Standard log levels: `DEBUG`, `INFO`, `WARN`, `ERROR`
 
 - **Metric Simulation**
-  - CPU/Memory utilization
+  - CPU/Memory utilization (configurable base with variance + spikes)
   - Request counts and latency
   - Error rates and network metrics
   - CloudWatch EMF (Embedded Metric Format) compatible
+
+- **Health Check Endpoint**
+  - `GET /health` returns `200 OK` with JSON status
+  - Load balancer compatible (ALB/NLB/ECS)
+  - Configurable port (default: `8080`)
 
 - **Multiple Output Modes**
   - `stdout`: JSON format compatible with `awslogs` driver
@@ -21,7 +27,7 @@ A lightweight Go application for simulating AWS CloudWatch logs and metrics. Des
 
 - **Container-Ready**
   - Multi-stage Alpine build (~15MB)
-  - Scratch-based minimal image (~10MB)
+  - Docker HEALTHCHECK built-in
   - AWS ECS Fargate compatible
 
 ## Quick Start
@@ -33,12 +39,18 @@ A lightweight Go application for simulating AWS CloudWatch logs and metrics. Des
 docker build -t log-metric-generator .
 
 # Run with stdout output (for awslogs driver)
-docker run -e OUTPUT_MODE=stdout \
+docker run -p 8080:8080 \
+           -e OUTPUT_MODE=stdout \
            -e SIMULATOR_LOG_GROUP=/ecs/simulator \
            log-metric-generator
 
+# Test health check
+curl http://localhost:8080/health
+# {"status":"healthy","uptime":"5s"}
+
 # Run with CloudWatch direct output
-docker run -e OUTPUT_MODE=cloudwatch \
+docker run -p 8080:8080 \
+           -e OUTPUT_MODE=cloudwatch \
            -e AWS_REGION=us-east-1 \
            -e AWS_ACCESS_KEY_ID=xxx \
            -e AWS_SECRET_ACCESS_KEY=xxx \
@@ -96,6 +108,9 @@ aws ecs start-task --cluster YOUR_CLUSTER --task-definition log-metric-simulator
 | `GENERATOR_CUSTOM_ENABLED` | Enable custom logs | `true` |
 | `METRICS_NAMESPACE` | CloudWatch Metrics namespace | `TestApp/Metrics` |
 | `METRICS_INTERVAL` | Metrics interval (seconds) | `60` |
+| `METRICS_CPU_BASE` | CPU utilization base percent | `45.0` |
+| `METRICS_MEMORY_BASE` | Memory utilization base percent | `65.0` |
+| `HEALTH_CHECK_PORT` | Health check HTTP port | `8080` |
 | `AWS_REGION` | AWS region | `us-east-1` |
 
 ### config.yaml
@@ -116,10 +131,25 @@ See `config.yaml` for full configuration options. Environment variables override
 │         Output Writers                 │
 │  ├─ stdout (awslogs driver)            │
 │  └─ CloudWatch API                    │
+├─────────────────────────────────────────┤
+│    Health Check Server (:8080)         │
+│    └─ GET /health                      │
 └─────────────────────────────────────────┘
 ```
 
-## Log Formats
+## Log Output Format
+
+All logs are written to stdout as JSON with a `level` field:
+
+```json
+{"level":"INFO","log_group":"/ecs/simulator","log_stream":"app-default","message":"...","timestamp":"..."}
+```
+
+### Log Levels
+- **DEBUG** — Custom application event logs
+- **INFO** — Web server access logs, metrics
+- **WARN** — Timeout and rate limit warnings
+- **ERROR** — Application errors with stack traces
 
 ### Web Server Logs (Apache Format)
 ```
@@ -128,13 +158,35 @@ See `config.yaml` for full configuration options. Environment variables override
 
 ### Error Logs
 ```
-[2026-03-22T10:30:45Z] ERROR: TIMEOUT | service=order-service request_id=xyz789
+[2026-03-22T10:30:45Z] ERROR: TIMEOUT - Request to downstream service timed out after 7s | service=order-service request_id=xyz789
 ```
 
 ### CloudWatch EMF Metrics
 ```json
 {"_aws":{"Timestamp":1679482245000,"CloudWatchMetrics":[{"Namespace":"TestApp/Metrics","Dimensions":[["ServiceName","InstanceId"]],"Metrics":[{"Name":"CPUUtilization","Unit":"Percent"}]}]},"CPUUtilization":45.23,"ServiceName":"app-service"}
 ```
+
+## Health Check
+
+The application exposes an HTTP health check endpoint for load balancer integration:
+
+```bash
+curl http://localhost:8080/health
+```
+
+Response:
+```json
+{
+  "status": "healthy",
+  "uptime": "1h23m45s"
+}
+```
+
+Compatible with:
+- AWS ALB/NLB target group health checks
+- ECS container health checks
+- Docker HEALTHCHECK
+- Kubernetes liveness/readiness probes
 
 ## License
 

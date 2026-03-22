@@ -1,6 +1,4 @@
 simulator:
-  log_group: /ecs/simulator
-  log_stream: app-default
   instance_id: ""
   flush_interval_ms: 5000
 
@@ -36,4 +34,9 @@ output:
   cloudwatch:
     region: us-east-1
     endpoint: ""
-    stream_name: ""
+    log_group: /ecs/simulator
+    log_stream: app-default
+
+health_check:
+  enabled: true
+  port: 8080

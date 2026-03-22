@@ -53,8 +53,8 @@ func New(cfg *config.Config) (*Simulator, error) {
 	case "cloudwatch":
 		cwCfg := output.CloudWatchConfig{
 			Region:    cfg.Output.CloudWatch.Region,
-			LogGroup:  cfg.Simulator.LogGroup,
-			LogStream: cfg.Simulator.LogStream,
+			LogGroup:  cfg.Output.CloudWatch.LogGroup,
+			LogStream: cfg.Output.CloudWatch.LogStream,
 			Endpoint:  cfg.Output.CloudWatch.Endpoint,
 			UseHTTP:   false,
 		}
@@ -64,7 +64,7 @@ func New(cfg *config.Config) (*Simulator, error) {
 		}
 		s.writer = writer
 	default:
-		s.writer = output.NewStdoutWriter(cfg.Simulator.LogGroup, cfg.Simulator.LogStream)
+		s.writer = output.NewStdoutWriter()
 	}
 
 	return s, nil
@@ -72,7 +72,6 @@ func New(cfg *config.Config) (*Simulator, error) {
 
 func (s *Simulator) Start(ctx context.Context) error {
 	log.Printf("Starting simulator...")
-	log.Printf("Log Group: %s, Log Stream: %s", s.cfg.Simulator.LogGroup, s.cfg.Simulator.LogStream)
 	log.Printf("Mode: %s", s.cfg.Output.Mode)
 
 	if s.cfg.Generators.WebServer.Enabled {

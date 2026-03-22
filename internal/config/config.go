@@ -10,16 +10,15 @@ import (
 )
 
 type Config struct {
-	Simulator  SimulatorConfig  `yaml:"simulator"`
-	Generators GeneratorsConfig `yaml:"generators"`
-	Metrics    MetricsConfig    `yaml:"metrics"`
-	Output     OutputConfig     `yaml:"output"`
+	Simulator   SimulatorConfig   `yaml:"simulator"`
+	Generators  GeneratorsConfig  `yaml:"generators"`
+	Metrics     MetricsConfig     `yaml:"metrics"`
+	Output      OutputConfig      `yaml:"output"`
+	HealthCheck HealthCheckConfig `yaml:"health_check"`
 }
 
 type SimulatorConfig struct {
 	InstanceID    string `yaml:"instance_id"`
-	LogGroup      string `yaml:"log_group"`
-	LogStream     string `yaml:"log_stream"`
 	RunDuration   int    `yaml:"run_duration_seconds"`
 	FlushInterval int    `yaml:"flush_interval_ms"`
 }
@@ -62,9 +61,15 @@ type OutputConfig struct {
 }
 
 type CloudWatchConfig struct {
-	Region     string `yaml:"region"`
-	Endpoint   string `yaml:"endpoint"`
-	StreamName string `yaml:"stream_name"`
+	Region    string `yaml:"region"`
+	Endpoint  string `yaml:"endpoint"`
+	LogGroup  string `yaml:"log_group"`
+	LogStream string `yaml:"log_stream"`
+}
+
+type HealthCheckConfig struct {
+	Enabled bool `yaml:"enabled"`
+	Port    int  `yaml:"port"`
 }
 
 func Load(path string) (*Config, error) {
@@ -83,14 +88,14 @@ func Load(path string) (*Config, error) {
 	if cfg.Simulator.InstanceID == "" {
 		cfg.Simulator.InstanceID = generateInstanceID()
 	}
-	if cfg.Simulator.LogGroup == "" {
-		cfg.Simulator.LogGroup = "/ecs/simulator"
-	}
-	if cfg.Simulator.LogStream == "" {
-		cfg.Simulator.LogStream = "app-" + cfg.Simulator.InstanceID
-	}
 	if cfg.Simulator.FlushInterval == 0 {
 		cfg.Simulator.FlushInterval = 5000
+	}
+	if cfg.Output.CloudWatch.LogGroup == "" {
+		cfg.Output.CloudWatch.LogGroup = "/ecs/simulator"
+	}
+	if cfg.Output.CloudWatch.LogStream == "" {
+		cfg.Output.CloudWatch.LogStream = "app-" + cfg.Simulator.InstanceID
 	}
 
 	return &cfg, nil
@@ -98,10 +103,10 @@ func Load(path string) (*Config, error) {
 
 func applyEnvOverrides(cfg *Config) {
 	if v := os.Getenv("SIMULATOR_LOG_GROUP"); v != "" {
-		cfg.Simulator.LogGroup = v
+		cfg.Output.CloudWatch.LogGroup = v
 	}
 	if v := os.Getenv("SIMULATOR_LOG_STREAM"); v != "" {
-		cfg.Simulator.LogStream = v
+		cfg.Output.CloudWatch.LogStream = v
 	}
 	if v := os.Getenv("SIMULATOR_INSTANCE_ID"); v != "" {
 		cfg.Simulator.InstanceID = v
@@ -132,7 +137,7 @@ func applyEnvOverrides(cfg *Config) {
 		cfg.Generators.CustomLogs.Enabled = parseBool(v)
 	}
 
-	if v := os.Getenv("METRICS_ENABLED"); v != "" {
+	if v := os.Getenv("METRICS_NAMESPACE"); v != "" {
 		cfg.Metrics.Namespace = v
 	}
 	if v := os.Getenv("METRICS_INTERVAL"); v != "" {
@@ -140,9 +145,25 @@ func applyEnvOverrides(cfg *Config) {
 			cfg.Metrics.IntervalSeconds = interval
 		}
 	}
+	if v := os.Getenv("METRICS_CPU_BASE"); v != "" {
+		if cpu, err := strconv.ParseFloat(v, 64); err == nil {
+			cfg.Metrics.CPUBase = cpu
+		}
+	}
+	if v := os.Getenv("METRICS_MEMORY_BASE"); v != "" {
+		if mem, err := strconv.ParseFloat(v, 64); err == nil {
+			cfg.Metrics.MemoryBase = mem
+		}
+	}
 
 	if v := os.Getenv("OUTPUT_MODE"); v != "" {
 		cfg.Output.Mode = v
+	}
+
+	if v := os.Getenv("HEALTH_CHECK_PORT"); v != "" {
+		if port, err := strconv.Atoi(v); err == nil {
+			cfg.HealthCheck.Port = port
+		}
 	}
 }
 
@@ -157,8 +178,6 @@ func generateInstanceID() string {
 func DefaultConfig() *Config {
 	return &Config{
 		Simulator: SimulatorConfig{
-			LogGroup:      "/ecs/simulator",
-			LogStream:     "app-default",
 			FlushInterval: 5000,
 		},
 		Generators: GeneratorsConfig{
@@ -188,8 +207,14 @@ func DefaultConfig() *Config {
 		Output: OutputConfig{
 			Mode: "stdout",
 			CloudWatch: CloudWatchConfig{
-				Region: "us-east-1",
+				Region:    "us-east-1",
+				LogGroup:  "/ecs/simulator",
+				LogStream: "app-default",
 			},
+		},
+		HealthCheck: HealthCheckConfig{
+			Enabled: true,
+			Port:    8080,
 		},
 	}
 }

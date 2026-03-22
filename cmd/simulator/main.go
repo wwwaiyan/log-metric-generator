@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/user/log-metric-generator/internal/config"
+	"github.com/user/log-metric-generator/internal/healthcheck"
 	"github.com/user/log-metric-generator/internal/simulator"
 )
 
@@ -31,6 +32,15 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Start health check server
+	var healthServer *healthcheck.Server
+	if cfg.HealthCheck.Enabled {
+		healthServer = healthcheck.New(cfg.HealthCheck.Port)
+		if err := healthServer.Start(); err != nil {
+			log.Fatalf("Failed to start health check server: %v", err)
+		}
+	}
+
 	sim, err := simulator.New(cfg)
 	if err != nil {
 		log.Fatalf("Failed to create simulator: %v", err)
@@ -48,6 +58,12 @@ func main() {
 		log.Printf("Received signal %v, shutting down...", sig)
 		cancel()
 		sim.Stop()
+
+		if healthServer != nil {
+			if err := healthServer.Stop(); err != nil {
+				log.Printf("Error stopping health check server: %v", err)
+			}
+		}
 	}
 
 	log.Println("Exiting...")
@@ -75,20 +91,24 @@ func applyRuntimeConfig(cfg *config.Config) {
 		}
 	}
 
+	if cfg.HealthCheck.Port == 0 {
+		cfg.HealthCheck.Port = 8080
+	}
+
 	log.Printf("Configuration loaded:")
 	log.Printf("  Instance ID: %s", cfg.Simulator.InstanceID)
-	log.Printf("  Log Group: %s", cfg.Simulator.LogGroup)
-	log.Printf("  Log Stream: %s", cfg.Simulator.LogStream)
 	log.Printf("  Output Mode: %s", cfg.Output.Mode)
 	log.Printf("  Web Server: enabled=%v, RPS=%d", cfg.Generators.WebServer.Enabled, cfg.Generators.WebServer.RPS)
 	log.Printf("  Error Logs: enabled=%v, error_rate=%.2f%%", cfg.Generators.ErrorLogs.Enabled, cfg.Generators.ErrorLogs.ErrorRate*100)
 	log.Printf("  Custom Logs: enabled=%v", cfg.Generators.CustomLogs.Enabled)
-	log.Printf("  Metrics: namespace=%s, interval=%ds", cfg.Metrics.Namespace, cfg.Metrics.IntervalSeconds)
+	log.Printf("  Metrics: namespace=%s, interval=%ds, cpu_base=%.1f%%, memory_base=%.1f%%",
+		cfg.Metrics.Namespace, cfg.Metrics.IntervalSeconds, cfg.Metrics.CPUBase, cfg.Metrics.MemoryBase)
+	log.Printf("  Health Check: enabled=%v, port=%d", cfg.HealthCheck.Enabled, cfg.HealthCheck.Port)
 }
 
 func printVersion() {
 	log.Println("CloudWatch Log/Metric Simulator")
-	log.Println("Version: 1.0.0")
+	log.Println("Version: 1.1.0")
 	log.Println("")
 	log.Println("Usage:")
 	log.Println("  simulator [options]")

@@ -113,7 +113,7 @@ func (g *ErrorGenerator) generateStackTrace(service string) string {
 		fmt.Sprintf("    at %s.handleRequest (/%s/handler.js:%d)", service, service, rand.Intn(500)+100),
 		fmt.Sprintf("    at %s.process (/%s/middleware.js:%d)", service, service, rand.Intn(300)+50),
 		fmt.Sprintf("    at async %s.execute (/%s/router.js:%d)", service, service, rand.Intn(200)+20),
-		fmt.Sprintf("    at module.exports (/%s/index.js:%d)", service, service, rand.Intn(100)+1),
+		fmt.Sprintf("    at module.exports (/%s/index.js:%d)", service, rand.Intn(100)+1),
 	}
 	return strings.Join(frames, "\n")
 }
@@ -131,7 +131,7 @@ func (log ErrorLog) ToJSON() string {
 }
 
 func (log ErrorLog) ToPlainText() string {
-	return fmt.Sprintf("[%s] %s: %s | service=%s request_id=%s\n%s",
+	return fmt.Sprintf("[%s] %s: %s - %s | service=%s request_id=%s\n%s",
 		log.Timestamp,
 		log.Level,
 		log.ErrorType,

@@ -14,17 +14,13 @@ type LogEntry struct {
 }
 
 type StdoutWriter struct {
-	mu        sync.Mutex
-	logGroup  string
-	logStream string
-	useJSON   bool
+	mu      sync.Mutex
+	useJSON bool
 }
 
-func NewStdoutWriter(logGroup, logStream string) *StdoutWriter {
+func NewStdoutWriter() *StdoutWriter {
 	return &StdoutWriter{
-		logGroup:  logGroup,
-		logStream: logStream,
-		useJSON:   true,
+		useJSON: true,
 	}
 }
 
@@ -34,9 +30,9 @@ func (w *StdoutWriter) WriteWebServerLog(line string) error {
 
 	timestamp := time.Now().UTC().Format(time.RFC3339Nano)
 	if w.useJSON {
-		fmt.Println(logToJSON(w.logGroup, w.logStream, timestamp, line))
+		fmt.Println(logToJSON(timestamp, "INFO", line))
 	} else {
-		fmt.Println(logToPlainText(w.logGroup, w.logStream, timestamp, line))
+		fmt.Println(logToPlainText(timestamp, "INFO", line))
 	}
 	return nil
 }
@@ -46,7 +42,7 @@ func (w *StdoutWriter) WriteErrorLog(message string) error {
 	defer w.mu.Unlock()
 
 	timestamp := time.Now().UTC().Format(time.RFC3339Nano)
-	fmt.Println(logToJSON(w.logGroup, w.logStream, timestamp, message))
+	fmt.Println(logToJSON(timestamp, "ERROR", message))
 	return nil
 }
 
@@ -55,7 +51,7 @@ func (w *StdoutWriter) WriteCustomLog(message string) error {
 	defer w.mu.Unlock()
 
 	timestamp := time.Now().UTC().Format(time.RFC3339Nano)
-	fmt.Println(logToJSON(w.logGroup, w.logStream, timestamp, message))
+	fmt.Println(logToJSON(timestamp, "DEBUG", message))
 	return nil
 }
 
@@ -64,7 +60,7 @@ func (w *StdoutWriter) WriteMetricEMF(emf string) error {
 	defer w.mu.Unlock()
 
 	timestamp := time.Now().UTC().Format(time.RFC3339Nano)
-	fmt.Println(logToJSON(w.logGroup, w.logStream, timestamp, emf))
+	fmt.Println(logToJSON(timestamp, "INFO", emf))
 	return nil
 }
 
@@ -76,25 +72,23 @@ func (w *StdoutWriter) Close() error {
 	return nil
 }
 
-func logToJSON(logGroup, logStream, timestamp, message string) string {
+func logToJSON(timestamp, level, message string) string {
 	entry := map[string]interface{}{
-		"log_group":  logGroup,
-		"log_stream": logStream,
-		"timestamp":  timestamp,
-		"message":    message,
+		"timestamp": timestamp,
+		"level":     level,
+		"message":   message,
 	}
 
 	data, err := json.Marshal(entry)
 	if err != nil {
-		return fmt.Sprintf(`{"log_group":"%s","log_stream":"%s","message":"%s"}`,
-			logGroup, logStream, message)
+		return fmt.Sprintf(`{"timestamp":"%s","level":"%s","message":"%s"}`,
+			timestamp, level, message)
 	}
 	return string(data)
 }
 
-func logToPlainText(logGroup, logStream, timestamp, message string) string {
-	return fmt.Sprintf("[%s] [%s] [%s] %s",
-		timestamp, logGroup, logStream, message)
+func logToPlainText(timestamp, level, message string) string {
+	return fmt.Sprintf("[%s] [%s] %s", timestamp, level, message)
 }
 
 type FileWriter struct {
